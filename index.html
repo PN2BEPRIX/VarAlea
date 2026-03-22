@@ -401,6 +401,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
     <div class="obj-card"><div class="obj-dot" style="background:#f9fafb;border-color:#d1d5db"></div>Cube blanc</div>
   </div>
   <div id="piece-explain" style="margin-top:12px;background:#f0f9ff;border:2px solid #bae6fd;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:600;color:#0c4a6e;line-height:1.7;min-height:48px"></div>
+
+  <!-- 2D absorption diagram -->
+  <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px">📊 Que voit-on ? — Absorption & réflexion par objet</div>
+  <div class="cvcard"><canvas id="cv-absorb"></canvas></div>
+  <div style="font-size:12px;color:var(--muted);font-weight:600;margin-top:6px;text-align:center">Cliquer / toucher un objet dans la scène 3D pour l'inspecter · ou choisir ici :</div>
+  <div id="obj-selector" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
 </div>
 
 <!-- ════ BILAN ════ -->
@@ -1385,49 +1391,216 @@ function showA(n){
 // ═══════════════════════════════════════════════════════
 // PIÈCE 3D
 // ═══════════════════════════════════════════════════════
-let TR=null, rafRoom=null;
+let TR=null, rafRoom=null, roomDirty=true;
+let selectedObj=null;
 
-// Light states: r,g,b on; w,y,m off
 const roomLights={r:true,g:true,b:true,w:false,y:false,m:false};
 const lightColors={r:0xff0000,g:0x00ff00,b:0x0000ff,w:0xffffff,y:0xffee00,m:0xff00ff};
 const lightLabels={r:'Rouge',g:'Vert',b:'Bleu',w:'Blanc',y:'Jaune',m:'Magenta'};
+
+const ROOM_OBJS=[
+  {label:'Balle rouge',    col:0xff2222,rgb:[255,34,34]},
+  {label:'Cube vert',      col:0x22cc44,rgb:[34,204,68]},
+  {label:'Cylindre bleu',  col:0x2244ff,rgb:[34,68,255]},
+  {label:'Boîte jaune',    col:0xffcc00,rgb:[255,204,0]},
+  {label:'Pyramide orange',col:0xff6600,rgb:[255,102,0]},
+  {label:'Sphère magenta', col:0xee00ee,rgb:[238,0,238]},
+  {label:'Prisme violet',  col:0x8833ff,rgb:[136,51,255]},
+  {label:'Cube blanc',     col:0xffffff,rgb:[255,255,255]},
+];
 
 function toggleLight(key){
   roomLights[key]=!roomLights[key];
   const card=document.getElementById('sw-'+key);
   const badge=document.getElementById('swb-'+key);
   const on=roomLights[key];
-  const badgeStyles={r:['#fee2e2','#dc2626'],g:['#dcfce7','#16a34a'],b:['#dbeafe','#1d4ed8'],w:['#f1f5f9','#374151'],y:['#fef3c7','#92400e'],m:['#fdf4ff','#7e22ce']};
+  const bs={r:['#fee2e2','#dc2626'],g:['#dcfce7','#16a34a'],b:['#dbeafe','#1d4ed8'],w:['#f1f5f9','#374151'],y:['#fef3c7','#92400e'],m:['#fdf4ff','#7e22ce']};
   card.className='sw-card'+(on?' on-'+key:'');
   badge.textContent=on?'ON':'OFF';
-  badge.style.background=on?badgeStyles[key][0]:'#f1f5f9';
-  badge.style.color=on?badgeStyles[key][1]:'#94a3b8';
-  if(TR) updateRoomLights();
+  badge.style.background=on?bs[key][0]:'#f1f5f9';
+  badge.style.color=on?bs[key][1]:'#94a3b8';
+  if(TR){updateRoomLights();}
   updatePieceExplain();
+  drawAbsorb();
 }
 
 function updatePieceExplain(){
   const active=Object.entries(roomLights).filter(([k,v])=>v).map(([k])=>lightLabels[k]);
-  const el=document.getElementById('piece-explain');
-  if(!active.length){el.textContent='🌑 Toutes les lumières sont éteintes → tout est noir. Sans lumière, les yeux ne perçoivent aucune couleur.';return;}
+  const el2=document.getElementById('piece-explain');
+  if(!active.length){el2.innerHTML='🌑 Toutes les lumières sont éteintes → tout est <strong>noir</strong>.';return;}
   const hasR=roomLights.r||roomLights.w||roomLights.y||roomLights.m;
   const hasG=roomLights.g||roomLights.w||roomLights.y;
   const hasB=roomLights.b||roomLights.w||roomLights.m;
-  const lines=[];
-  lines.push(`💡 Lumières actives : <strong>${active.join(', ')}</strong>`);
-  if(hasR&&!hasG&&!hasB) lines.push('🔴 Seule la lumière rouge est présente → les objets <strong>rouges</strong> paraissent rouges, les <strong>verts et bleus</strong> paraissent <strong>noirs</strong>.');
-  else if(!hasR&&hasG&&!hasB) lines.push('🟢 Seule la lumière verte → les objets <strong>verts</strong> paraissent verts, les <strong>rouges et bleus</strong> paraissent <strong>noirs</strong>.');
-  else if(!hasR&&!hasG&&hasB) lines.push('🔵 Seule la lumière bleue → les objets <strong>bleus</strong> paraissent bleus, les <strong>rouges et verts</strong> paraissent <strong>noirs</strong>.');
-  else if(hasR&&hasG&&!hasB) lines.push('🟡 Rouge+Vert = lumière jaune → les objets <strong>jaunes</strong> sont bien éclairés, les objets <strong>bleus</strong> restent sombres.');
-  else if(hasR&&!hasG&&hasB) lines.push('🟣 Rouge+Bleu = lumière magenta → les objets <strong>magenta/rouges/bleus</strong> sont éclairés, les <strong>verts</strong> paraissent noirs.');
-  else if(!hasR&&hasG&&hasB) lines.push('🩵 Vert+Bleu = lumière cyan → les objets <strong>cyan/verts/bleus</strong> sont éclairés, les <strong>rouges</strong> paraissent noirs.');
-  else if(hasR&&hasG&&hasB) lines.push('⚪ Lumière blanche (R+V+B) → tous les objets apparaissent avec leur <strong>vraie couleur</strong>.');
-  el.innerHTML=lines.join('<br>');
+  let msg='';
+  if(hasR&&hasG&&hasB) msg='⚪ Lumière blanche → chaque objet apparaît avec sa <strong>vraie couleur</strong>.';
+  else if(hasR&&!hasG&&!hasB) msg='🔴 Lumière rouge seule → objets <strong>rouges/oranges</strong> visibles, <strong>verts et bleus</strong> paraissent <strong>noirs</strong>.';
+  else if(!hasR&&hasG&&!hasB) msg='🟢 Lumière verte seule → objets <strong>verts</strong> visibles, <strong>rouges et bleus</strong> paraissent <strong>noirs</strong>.';
+  else if(!hasR&&!hasG&&hasB) msg='🔵 Lumière bleue seule → objets <strong>bleus/violets</strong> visibles, <strong>rouges et verts</strong> paraissent <strong>noirs</strong>.';
+  else if(hasR&&hasG&&!hasB) msg='🟡 Rouge+Vert = jaune → objets <strong>jaunes/rouges/verts</strong> éclairés, <strong>bleus</strong> restent sombres.';
+  else if(hasR&&!hasG&&hasB) msg='🟣 Rouge+Bleu = magenta → objets <strong>magenta/rouges/bleus</strong> éclairés, <strong>verts</strong> restent sombres.';
+  else if(!hasR&&hasG&&hasB) msg='🩵 Vert+Bleu = cyan → objets <strong>cyan/verts/bleus</strong> éclairés, <strong>rouges</strong> restent sombres.';
+  el2.innerHTML=`💡 Actives : <strong>${active.join(', ')}</strong><br>${msg}`;
+}
+
+function selectObj(idx){
+  selectedObj=idx;
+  document.querySelectorAll('.obj-sel-btn').forEach((b,i)=>b.classList.toggle('on',i===idx));
+  if(TR&&TR.ring&&TR.objMeshes[idx]){
+    const m=TR.objMeshes[idx];
+    TR.ring.position.set(m.position.x,-TR.roomH/2+0.12,m.position.z);
+    TR.ring.visible=true; roomDirty=true;
+  }
+  drawAbsorb();
+}
+
+function drawAbsorb(){
+  const cv=document.getElementById('cv-absorb');
+  if(!cv) return;
+  const W=cv.parentElement.offsetWidth||680, H=Math.round(W*0.42);
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#0f172a'; ctx.fillRect(0,0,W,H);
+
+  const hasR=roomLights.r||roomLights.w||roomLights.y||roomLights.m;
+  const hasG=roomLights.g||roomLights.w||roomLights.y;
+  const hasB=roomLights.b||roomLights.w||roomLights.m;
+  const incoming=[[hasR,255,30,30,'Rouge'],[hasG,30,220,60,'Vert'],[hasB,50,100,255,'Bleu']];
+
+  const obj=selectedObj!==null?ROOM_OBJS[selectedObj]:null;
+  const oR=obj?obj.rgb[0]:255, oG=obj?obj.rgb[1]:255, oB=obj?obj.rgb[2]:255;
+
+  const reflR=hasR&&oR>80;
+  const reflG=hasG&&oG>80;
+  const reflB=hasB&&oB>80;
+
+  const pad=Math.round(W*0.04);
+  const midX=Math.round(W*0.42);
+  const objW=Math.round(W*0.13), objH=Math.round(H*0.58);
+  const objX=midX-objW/2, objY=(H-objH)/2;
+  const rowH=H/4;
+
+  // Incoming rays
+  incoming.forEach(([on,r,g,b,name],i)=>{
+    const y=rowH*(i+0.5)+rowH*0.1;
+    ctx.globalAlpha=on?1:0.12;
+    const grad=ctx.createLinearGradient(pad,0,objX-8,0);
+    grad.addColorStop(0,`rgba(${r},${g},${b},0.15)`);
+    grad.addColorStop(1,`rgba(${r},${g},${b},1)`);
+    ctx.strokeStyle=grad; ctx.lineWidth=on?5:2; ctx.setLineDash(on?[]:[6,5]);
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(objX-8,y); ctx.stroke(); ctx.setLineDash([]);
+    if(on){
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
+      ctx.beginPath(); ctx.moveTo(objX-8,y); ctx.lineTo(objX-18,y-5); ctx.lineTo(objX-18,y+5); ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha=on?1:0.25;
+    ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.font=`700 ${Math.max(10,Math.round(W*0.018))}px 'Nunito',sans-serif`;
+    ctx.textAlign='left'; ctx.fillText(name,pad,y-9);
+    ctx.globalAlpha=1;
+  });
+
+  // Object box
+  if(obj){
+    const apR=reflR?oR:0, apG=reflG?oG:0, apB=reflB?oB:0;
+    ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=14;
+    ctx.fillStyle=`rgb(${apR},${apG},${apB})`;
+    if(ctx.roundRect) ctx.roundRect(objX,objY,objW,objH,8); else ctx.rect(objX,objY,objW,objH);
+    ctx.fill(); ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=2;
+    if(ctx.roundRect) ctx.roundRect(objX,objY,objW,objH,8); else ctx.rect(objX,objY,objW,objH);
+    ctx.stroke();
+    // True colour strip at bottom
+    ctx.fillStyle=`rgb(${oR},${oG},${oB})`; ctx.globalAlpha=0.55;
+    const swH2=Math.round(objH*0.18);
+    ctx.fillRect(objX,objY+objH-swH2,objW,swH2); ctx.globalAlpha=1;
+    ctx.fillStyle='#fff'; ctx.font=`800 ${Math.max(9,Math.round(W*0.016))}px 'Nunito',sans-serif`;
+    ctx.textAlign='center'; ctx.fillText(obj.label,midX,objY+objH+17);
+    ctx.font=`500 ${Math.max(8,Math.round(W*0.013))}px 'Nunito',sans-serif`;
+    ctx.fillStyle='#64748b'; ctx.fillText('bande = vraie couleur',midX,objY+objH+30);
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.07)';
+    if(ctx.roundRect) ctx.roundRect(objX,objY,objW,objH,8); else ctx.rect(objX,objY,objW,objH);
+    ctx.fill();
+    ctx.fillStyle='#475569'; ctx.font=`700 ${Math.max(10,Math.round(W*0.018))}px 'Nunito',sans-serif`;
+    ctx.textAlign='center'; ctx.fillText('← Sélectionner',midX,H/2-6); ctx.fillText('un objet',midX,H/2+14);
+  }
+
+  // Outgoing rays
+  const rx0=midX+objW/2+10;
+  if(obj){
+    incoming.forEach(([on,r,g,b,name],i)=>{
+      const y=rowH*(i+0.5)+rowH*0.1;
+      const ch=[oR,oG,oB][i];
+      const refl=on&&ch>80;
+      const abs=on&&!refl;
+      if(refl){
+        ctx.globalAlpha=1;
+        const gr2=ctx.createLinearGradient(rx0,0,W-pad-Math.round(W*0.16),0);
+        gr2.addColorStop(0,`rgba(${r},${g},${b},1)`); gr2.addColorStop(1,`rgba(${r},${g},${b},0.15)`);
+        ctx.strokeStyle=gr2; ctx.lineWidth=5; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(rx0,y); ctx.lineTo(W-pad-Math.round(W*0.16),y); ctx.stroke();
+        ctx.fillStyle=`rgb(${r},${g},${b})`;
+        const ax=W-pad-Math.round(W*0.16);
+        ctx.beginPath(); ctx.moveTo(ax,y); ctx.lineTo(ax-10,y-5); ctx.lineTo(ax-10,y+5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.font=`700 ${Math.max(9,Math.round(W*0.016))}px 'Nunito',sans-serif`;
+        ctx.textAlign='right'; ctx.fillText('↩ Réfléchi',ax,y-9);
+      } else if(abs){
+        ctx.globalAlpha=0.45;
+        ctx.strokeStyle=`rgb(${r},${g},${b})`; ctx.lineWidth=2; ctx.setLineDash([4,5]);
+        const xe=rx0+Math.round(W*0.06);
+        ctx.beginPath(); ctx.moveTo(rx0,y); ctx.lineTo(xe,y); ctx.stroke(); ctx.setLineDash([]);
+        const xm=rx0+Math.round(W*0.04), xd=9;
+        ctx.strokeStyle=`rgb(${r},${g},${b})`; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(xm-xd,y-xd); ctx.lineTo(xm+xd,y+xd); ctx.moveTo(xm+xd,y-xd); ctx.lineTo(xm-xd,y+xd); ctx.stroke();
+        ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.font=`700 ${Math.max(9,Math.round(W*0.016))}px 'Nunito',sans-serif`;
+        ctx.textAlign='left'; ctx.globalAlpha=0.6; ctx.fillText('Absorbé',rx0+Math.round(W*0.08),y-9);
+        ctx.globalAlpha=1;
+      } else {
+        ctx.globalAlpha=0.12;
+        ctx.strokeStyle='#888'; ctx.lineWidth=1.5; ctx.setLineDash([3,6]);
+        ctx.beginPath(); ctx.moveTo(rx0,y); ctx.lineTo(rx0+Math.round(W*0.05),y); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha=1;
+      }
+    });
+    // Colour seen box
+    const seenR=reflR?oR:0, seenG=reflG?oG:0, seenB=reflB?oB:0;
+    const bx=W-Math.round(W*0.16)-pad+4, by=Math.round(H*0.2), bw=Math.round(W*0.14), bh=Math.round(H*0.6);
+    ctx.globalAlpha=1;
+    ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=10;
+    ctx.fillStyle=`rgb(${seenR},${seenG},${seenB})`;
+    if(ctx.roundRect) ctx.roundRect(bx,by,bw,bh,8); else ctx.rect(bx,by,bw,bh);
+    ctx.fill(); ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1.5;
+    if(ctx.roundRect) ctx.roundRect(bx,by,bw,bh,8); else ctx.rect(bx,by,bw,bh); ctx.stroke();
+    const isBlk=seenR<20&&seenG<20&&seenB<20;
+    ctx.fillStyle=isBlk?'#555':'rgba(255,255,255,0.9)';
+    ctx.font=`800 ${Math.max(9,Math.round(W*0.016))}px 'Nunito',sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(isBlk?'NOIR':'Couleur',bx+bw/2,by+bh+17);
+    ctx.fillText('perçue',bx+bw/2,by+bh+30);
+  }
+
+  ctx.globalAlpha=1; ctx.textAlign='left';
+  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`500 ${Math.max(8,Math.round(W*0.013))}px 'Nunito',sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('Lumières',Math.round(W*0.12),H-8);
+  ctx.fillText('Objet',midX,H-8);
+  if(obj) ctx.fillText('Vu par l\'œil',W-Math.round(W*0.11),H-8);
+  ctx.textAlign='left';
 }
 
 function initPiece(){
   if(!window.THREE){setTimeout(initPiece,150);return;}
-  if(TR){updateRoomLights();return;}
+  if(TR){updateRoomLights();roomDirty=true;return;}
+
+  const sel=document.getElementById('obj-selector');
+  if(sel&&!sel.children.length){
+    ROOM_OBJS.forEach((o,i)=>{
+      const btn=document.createElement('button');
+      btn.className='mbtn obj-sel-btn'; btn.textContent=o.label;
+      btn.style.borderLeft=`4px solid rgb(${o.rgb[0]},${o.rgb[1]},${o.rgb[2]})`;
+      btn.onclick=()=>selectObj(i); sel.appendChild(btn);
+    });
+  }
 
   const wrap=document.getElementById('wrap-piece');
   document.getElementById('loading-piece')?.remove();
@@ -1435,188 +1608,192 @@ function initPiece(){
 
   const renderer=new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.shadowMap.enabled=false; // disable shadows for cleaner colour rendering
+  renderer.shadowMap.enabled=false;
   renderer.setClearColor(0x0a0a0a); wrap.appendChild(renderer.domElement);
 
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(58,W/H,0.1,80);
+  scene.add(new THREE.AmbientLight(0xffffff,0.04));
 
-  // Base ambient — very slight so pitch black stays black
-  const ambient=new THREE.AmbientLight(0xffffff,0.04);
-  scene.add(ambient);
-
-  // ── ROOM GEOMETRY ──
-  const roomW=13,roomH=6.5,roomD=13;
-  const wallMat=new THREE.MeshLambertMaterial({color:0xe8dfd0,side:THREE.BackSide});
-  const room=new THREE.Mesh(new THREE.BoxGeometry(roomW,roomH,roomD),wallMat);
-  scene.add(room);
-
-  // Floor
-  const floorMat=new THREE.MeshLambertMaterial({color:0xc8a86b});
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(roomW-0.1,roomD-0.1),floorMat);
-  floor.rotation.x=-Math.PI/2; floor.position.y=-roomH/2+0.01; scene.add(floor);
+  const roomH=6.5, roomW=13, roomD=13;
+  scene.add(new THREE.Mesh(new THREE.BoxGeometry(roomW,roomH,roomD),new THREE.MeshLambertMaterial({color:0xe8dfd0,side:THREE.BackSide})));
+  const flr=new THREE.Mesh(new THREE.PlaneGeometry(roomW-0.1,roomD-0.1),new THREE.MeshLambertMaterial({color:0xc8a86b}));
+  flr.rotation.x=-Math.PI/2; flr.position.y=-roomH/2+0.01; scene.add(flr);
   const gridR=new THREE.GridHelper(13,13,0x9b7a3a,0x9b7a3a);
-  gridR.position.y=-roomH/2+0.02; gridR.material.opacity=0.25; gridR.material.transparent=true; scene.add(gridR);
+  gridR.position.y=-roomH/2+0.02; gridR.material.opacity=0.22; gridR.material.transparent=true; scene.add(gridR);
 
-  // ── 6 POINT LIGHTS — each illuminates the whole room when on ──
-  // Placed near ceiling, spread so coverage overlaps fully
-  const bulbPositions={
-    r:[-3.5, roomH/2-0.4, -3],
-    g:[ 3.5, roomH/2-0.4, -3],
-    b:[ 0,   roomH/2-0.4,  0],
-    w:[ 0,   roomH/2-0.4, -1],
-    y:[-3.5, roomH/2-0.4,  3],
-    m:[ 3.5, roomH/2-0.4,  3],
-  };
-  const pointLights={}, bulbMeshes={}, bulbGlows={};
-  Object.entries(bulbPositions).forEach(([key,[x,y,z]])=>{
+  const bPos={r:[-3.5,roomH/2-0.4,-3],g:[3.5,roomH/2-0.4,-3],b:[0,roomH/2-0.4,0],w:[0,roomH/2-0.4,-1],y:[-3.5,roomH/2-0.4,3],m:[3.5,roomH/2-0.4,3]};
+  const pointLights={},bulbMeshes={},bulbGlows={};
+  Object.entries(bPos).forEach(([key,[x,y,z]])=>{
     const col=lightColors[key];
-
-    // Main PointLight — decay=0 means NO falloff, uniform room illumination
-    const pt=new THREE.PointLight(col, 0, 0, 0); // intensity=0, distance=0=infinite, decay=0
-    pt.position.set(x,y,z);
-    scene.add(pt);
-    pointLights[key]=pt;
-
-    // Bulb sphere (glows when on)
-    const bulbM=new THREE.Mesh(
-      new THREE.SphereGeometry(0.16,12,12),
-      new THREE.MeshBasicMaterial({color:0x222222})
-    );
-    bulbM.position.set(x,y,z); scene.add(bulbM); bulbMeshes[key]=bulbM;
-
-    // Glow halo (slightly larger, transparent)
-    const halo=new THREE.Mesh(
-      new THREE.SphereGeometry(0.38,10,10),
-      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0})
-    );
+    const pt=new THREE.PointLight(col,0,0,0); pt.position.set(x,y,z); scene.add(pt); pointLights[key]=pt;
+    const bm=new THREE.Mesh(new THREE.SphereGeometry(0.16,12,12),new THREE.MeshBasicMaterial({color:0x1a1a1a}));
+    bm.position.set(x,y,z); scene.add(bm); bulbMeshes[key]=bm;
+    const halo=new THREE.Mesh(new THREE.SphereGeometry(0.38,10,10),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0}));
     halo.position.set(x,y,z); scene.add(halo); bulbGlows[key]=halo;
-
-    // Cord
-    const cord=new THREE.Mesh(
-      new THREE.CylinderGeometry(0.015,0.015,0.6,6),
-      new THREE.MeshLambertMaterial({color:0x555555})
-    );
+    const cord=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.6,6),new THREE.MeshLambertMaterial({color:0x555555}));
     cord.position.set(x,y+0.35,z); scene.add(cord);
-
-    // Lampshade
-    const shade=new THREE.Mesh(
-      new THREE.ConeGeometry(0.42,0.3,12,1,true),
-      new THREE.MeshLambertMaterial({color:0x999999,side:THREE.DoubleSide})
-    );
+    const shade=new THREE.Mesh(new THREE.ConeGeometry(0.42,0.3,12,1,true),new THREE.MeshLambertMaterial({color:0x999999,side:THREE.DoubleSide}));
     shade.rotation.x=Math.PI; shade.position.set(x,y-0.12,z); scene.add(shade);
   });
 
-  // ── OBJECTS ──
-  // Each object has a TRUE color (MeshLambertMaterial) — it only reflects its color
-  const objs=[
-    {geo:new THREE.SphereGeometry(0.55,24,24), col:0xff2222, x:-4, z:-1, label:'Balle rouge'},
-    {geo:new THREE.BoxGeometry(0.9,0.9,0.9),   col:0x22cc44, x:-2, z: 1, label:'Cube vert'},
-    {geo:new THREE.CylinderGeometry(0.3,0.3,1.1,20), col:0x2244ff, x: 0, z:-1, label:'Cylindre bleu'},
-    {geo:new THREE.BoxGeometry(1.0,0.65,0.65), col:0xffcc00, x: 2, z: 1, label:'Boîte jaune'},
-    {geo:new THREE.ConeGeometry(0.45,1.1,4),   col:0xff6600, x: 4, z: 0, label:'Pyramide orange'},
-    {geo:new THREE.SphereGeometry(0.5,20,20),  col:0xee00ee, x:-3, z: 3, label:'Sphère magenta'},
-    {geo:new THREE.BoxGeometry(0.7,1.2,0.7),   col:0x8833ff, x: 3, z: 3, label:'Prisme violet'},
-    {geo:new THREE.BoxGeometry(0.85,0.85,0.85),col:0xffffff, x: 0, z: 3, label:'Cube blanc'},
-  ];
-
-  objs.forEach(({geo,col,x,z})=>{
-    const mat=new THREE.MeshLambertMaterial({color:col});
-    const mesh=new THREE.Mesh(geo,mat);
-    const box3=new THREE.Box3().setFromObject(mesh);
-    const h=(box3.max.y-box3.min.y)/2;
-    mesh.position.set(x,-roomH/2+h+0.01,z);
-    scene.add(mesh);
+  const oPos=[[-4,-1],[-2,1],[0,-1],[2,1],[4,0],[-3,3],[3,3],[0,3]];
+  const oGeos=[new THREE.SphereGeometry(0.55,24,24),new THREE.BoxGeometry(0.9,0.9,0.9),new THREE.CylinderGeometry(0.3,0.3,1.1,20),new THREE.BoxGeometry(1.0,0.65,0.65),new THREE.ConeGeometry(0.45,1.1,4),new THREE.SphereGeometry(0.5,20,20),new THREE.BoxGeometry(0.7,1.2,0.7),new THREE.BoxGeometry(0.85,0.85,0.85)];
+  const objMeshes=[];
+  ROOM_OBJS.forEach((o,i)=>{
+    const mesh=new THREE.Mesh(oGeos[i],new THREE.MeshLambertMaterial({color:o.col}));
+    const bb=new THREE.Box3().setFromObject(mesh);
+    const h=(bb.max.y-bb.min.y)/2;
+    mesh.position.set(oPos[i][0],-roomH/2+h+0.01,oPos[i][1]);
+    mesh.userData={idx:i};
+    scene.add(mesh); objMeshes.push(mesh);
   });
 
-  TR={renderer,scene,camera,pointLights,bulbMeshes,bulbGlows,W,H};
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.75,0.045,8,32),new THREE.MeshBasicMaterial({color:0xfbbf24}));
+  ring.rotation.x=Math.PI/2; ring.visible=false; scene.add(ring);
 
-  // ── ORBIT ──
-  let theta=-0.3,phi=0.9,radius=13;
+  TR={renderer,scene,camera,pointLights,bulbMeshes,bulbGlows,objMeshes,ring,roomH,W,H};
+
+  let theta=-0.3,phi=0.88,radius=12;
   const tgt=new THREE.Vector3(0,0,0);
-  const DEF={theta:-0.3,phi:0.9,radius:13};
+  const DEF={theta:-0.3,phi:0.88,radius:12};
+  const raycaster=new THREE.Raycaster();
+
   function camUpdate(){
     camera.position.set(tgt.x+radius*Math.sin(phi)*Math.cos(theta),tgt.y+radius*Math.cos(phi),tgt.z+radius*Math.sin(phi)*Math.sin(theta));
-    camera.lookAt(tgt);
+    camera.lookAt(tgt); roomDirty=true;
   }
   camUpdate(); TR.camUpdate=camUpdate;
 
-  // Overlays
-  const hint=document.createElement('div'); hint.className='overlay-hint';
-  hint.textContent='1 doigt: rotation · 2 doigts: zoom/pan · double-tap: reset'; wrap.appendChild(hint);
-  const resetBtn=document.createElement('button'); resetBtn.className='overlay-reset';
-  resetBtn.textContent='⟳ Vue initiale'; wrap.appendChild(resetBtn);
-  resetBtn.addEventListener('click',()=>{theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0,0,0);camUpdate();});
+  const hint2=document.createElement('div'); hint2.className='overlay-hint';
+  hint2.textContent='Toucher: inspecter · Maintenir+glisser: déplacer · 2 doigts: zoom/pan'; wrap.appendChild(hint2);
+  const rb2=document.createElement('button'); rb2.className='overlay-reset';
+  rb2.textContent='⟳ Vue initiale'; wrap.appendChild(rb2);
+  rb2.addEventListener('click',()=>{theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0,0,0);camUpdate();});
 
   const el=renderer.domElement;
-  let mD2={on:false,mode:'orbit',x:0,y:0};
-  el.addEventListener('mousedown',e=>{mD2={on:true,mode:e.button===2?'pan':'orbit',x:e.clientX,y:e.clientY};e.preventDefault();});
+
+  function ndcXY(cx,cy){
+    const rc=el.getBoundingClientRect();
+    return new THREE.Vector2(((cx-rc.left)/rc.width)*2-1,-((cy-rc.top)/rc.height)*2+1);
+  }
+  function pickObj(cx,cy){
+    raycaster.setFromCamera(ndcXY(cx,cy),camera);
+    const h=raycaster.intersectObjects(objMeshes);
+    return h.length?h[0].object:null;
+  }
+  function floorPt(cx,cy){
+    raycaster.setFromCamera(ndcXY(cx,cy),camera);
+    const pl=new THREE.Plane(new THREE.Vector3(0,1,0),roomH/2-0.5);
+    const pt=new THREE.Vector3(); raycaster.ray.intersectPlane(pl,pt);
+    if(!pt) return null;
+    pt.x=Math.max(-5.5,Math.min(5.5,pt.x)); pt.z=Math.max(-5.5,Math.min(5.5,pt.z));
+    return pt;
+  }
+
+  // Mouse
+  let mSt={mode:'none',obj:null,px:0,py:0,moved:false};
+  el.addEventListener('mousedown',e=>{
+    const h=pickObj(e.clientX,e.clientY);
+    mSt={mode:h?'prepress':'orbit',obj:h,px:e.clientX,py:e.clientY,moved:false};
+    e.preventDefault();
+  });
   el.addEventListener('contextmenu',e=>e.preventDefault());
   window.addEventListener('mousemove',e=>{
-    if(!mD2.on)return;
-    const dx=e.clientX-mD2.x,dy=e.clientY-mD2.y;
-    if(mD2.mode==='orbit'){theta-=dx*0.012;phi=Math.max(0.1,Math.min(1.55,phi-dy*0.011));}
-    else{const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.001;tgt.addScaledVector(r,-dx*sc);tgt.addScaledVector(u,dy*sc);}
-    mD2.x=e.clientX;mD2.y=e.clientY;camUpdate();
+    if(mSt.mode==='none')return;
+    const dx=e.clientX-mSt.px,dy=e.clientY-mSt.py;
+    if(!mSt.moved&&Math.hypot(dx,dy)>5)mSt.moved=true;
+    if(mSt.moved&&mSt.mode==='prepress')mSt.mode=mSt.obj?'drag':'orbit';
+    if(mSt.mode==='drag'&&mSt.obj){
+      const pt=floorPt(e.clientX,e.clientY);
+      if(pt){mSt.obj.position.x=pt.x;mSt.obj.position.z=pt.z;ring.position.set(pt.x,-roomH/2+0.12,pt.z);roomDirty=true;}
+    }else if(mSt.mode==='orbit'&&mSt.moved){
+      theta-=dx*0.012;phi=Math.max(0.1,Math.min(1.55,phi-dy*0.011));
+      mSt.px=e.clientX;mSt.py=e.clientY;camUpdate();
+    }
   });
-  window.addEventListener('mouseup',()=>mD2.on=false);
+  window.addEventListener('mouseup',()=>{
+    if(!mSt.moved&&mSt.obj){
+      selectObj(mSt.obj.userData.idx);
+      ring.position.set(mSt.obj.position.x,-roomH/2+0.12,mSt.obj.position.z);
+      ring.visible=true; roomDirty=true;
+    }
+    mSt={mode:'none',obj:null,px:0,py:0,moved:false};
+  });
   el.addEventListener('wheel',e=>{radius=Math.max(3,Math.min(22,radius+e.deltaY*0.018));camUpdate();e.preventDefault();},{passive:false});
 
-  // Touch — el only (no window)
-  let tP={},lPi=null,lPa=null,lTp=0;
-  el.addEventListener('touchstart',e=>{e.preventDefault();tP={};for(const t of e.touches)tP[t.identifier]={x:t.clientX,y:t.clientY};lPi=null;lPa=null;},{passive:false});
+  // Touch
+  let tSt={phase:'idle',multi:false,obj:null,t0:0};
+  let tPts={},lPi=null,lPa=null;
+  el.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    tPts={}; for(const t of e.touches)tPts[t.identifier]={x:t.clientX,y:t.clientY};
+    lPi=null; lPa=null;
+    if(e.touches.length===1){
+      const h=pickObj(e.touches[0].clientX,e.touches[0].clientY);
+      tSt={phase:h?'prepress':'orbit',multi:false,obj:h,t0:Date.now()};
+    }else{tSt={phase:'pinch',multi:true,obj:null,t0:0};}
+  },{passive:false});
   el.addEventListener('touchmove',e=>{
     e.preventDefault();
     const arr=Array.from(e.touches);
-    if(arr.length===1){
-      const t=arr[0],prev=tP[t.identifier]||{x:t.clientX,y:t.clientY};
-      theta-=(t.clientX-prev.x)*0.014;phi=Math.max(0.1,Math.min(1.55,phi-(t.clientY-prev.y)*0.013));
-      tP[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();
+    if(arr.length===1&&tSt.phase!=='pinch'){
+      const t=arr[0],prev=tPts[t.identifier]||{x:t.clientX,y:t.clientY};
+      const dx=t.clientX-prev.x,dy=t.clientY-prev.y;
+      if(tSt.phase==='prepress'&&Math.hypot(dx,dy)>4)tSt.phase=tSt.obj?'drag':'orbit';
+      if(tSt.phase==='drag'&&tSt.obj){
+        const pt=floorPt(t.clientX,t.clientY);
+        if(pt){tSt.obj.position.x=pt.x;tSt.obj.position.z=pt.z;ring.position.set(pt.x,-roomH/2+0.12,pt.z);roomDirty=true;}
+      }else if(tSt.phase==='orbit'){
+        theta-=dx*0.014;phi=Math.max(0.1,Math.min(1.55,phi-dy*0.013));camUpdate();
+      }
+      tPts[t.identifier]={x:t.clientX,y:t.clientY};
     }else if(arr.length===2){
-      const[a2,b2]=arr;
-      const mx=(a2.clientX+b2.clientX)/2,my=(a2.clientY+b2.clientY)/2;
+      tSt.phase='pinch';tSt.multi=true;
+      const[a2,b2]=arr,mx=(a2.clientX+b2.clientX)/2,my2=(a2.clientY+b2.clientY)/2;
       const dist=Math.hypot(a2.clientX-b2.clientX,a2.clientY-b2.clientY);
-      if(lPi!==null)radius=Math.max(3,Math.min(22,radius+(lPi-dist)*0.03));
+      if(lPi!==null)radius=Math.max(3,Math.min(22,radius+(lPi-dist)*0.028));
       lPi=dist;
-      if(lPa){const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.001;tgt.addScaledVector(r,-(mx-lPa.x)*sc);tgt.addScaledVector(u,(my-lPa.y)*sc);}
-      lPa={x:mx,y:my};for(const t of arr)tP[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();
+      if(lPa){const rv=new THREE.Vector3(),uv=new THREE.Vector3();rv.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();uv.copy(camera.up);const sc=radius*0.001;tgt.addScaledVector(rv,-(mx-lPa.x)*sc);tgt.addScaledVector(uv,(my2-lPa.y)*sc);}
+      lPa={x:mx,y:my2};for(const t of arr)tPts[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();
     }
   },{passive:false});
   el.addEventListener('touchend',e=>{
-    tP={};lPi=null;lPa=null;
-    const now=Date.now();if(now-lTp<300){theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0,0,0);camUpdate();}
-    lTp=now;
+    // Only select on tap — never after pinch
+    if(!tSt.multi&&tSt.phase==='prepress'&&tSt.obj&&(Date.now()-tSt.t0)<350){
+      selectObj(tSt.obj.userData.idx);
+      ring.position.set(tSt.obj.position.x,-roomH/2+0.12,tSt.obj.position.z);
+      ring.visible=true; roomDirty=true;
+    }
+    tPts={}; lPi=null; lPa=null;
+    tSt={phase:'idle',multi:false,obj:null,t0:0};
   });
+
   window.addEventListener('resize',()=>{
     if(!TR)return;
     const nW=wrap.offsetWidth||680,nH=Math.min(500,Math.round(nW*0.68));
-    TR.renderer.setSize(nW,nH);TR.camera.aspect=nW/nH;TR.camera.updateProjectionMatrix();TR.camUpdate&&TR.camUpdate();
+    TR.renderer.setSize(nW,nH);TR.camera.aspect=nW/nH;TR.camera.updateProjectionMatrix();camUpdate();
   });
 
-  // RAF
-  function tickRoom(){rafRoom=requestAnimationFrame(tickRoom);TR.renderer.render(TR.scene,TR.camera);}
+  function tickRoom(){rafRoom=requestAnimationFrame(tickRoom);if(roomDirty){TR.renderer.render(TR.scene,TR.camera);roomDirty=false;}}
   tickRoom();
-
   updateRoomLights();
   updatePieceExplain();
+  drawAbsorb();
 }
 
 function updateRoomLights(){
-  if(!TR) return;
-  // Count active lights to scale intensity
-  const nOn=Object.values(roomLights).filter(Boolean).length;
-  // Each light gets full intensity — more lights = brighter room (additive)
-  // With decay=0, intensity maps linearly to scene brightness
-  const INTENSITY = 1.2; // per light, tune here
+  if(!TR)return;
   Object.entries(roomLights).forEach(([key,on])=>{
-    TR.pointLights[key].intensity = on ? INTENSITY : 0;
-    const litCol=lightColors[key];
-    TR.bulbMeshes[key].material.color.set(on ? litCol : 0x1a1a1a);
-    TR.bulbMeshes[key].scale.setScalar(on ? 2.2 : 1.0);
-    TR.bulbGlows[key].material.opacity = on ? 0.45 : 0;
-    TR.bulbGlows[key].material.color.set(on ? litCol : 0x000000);
+    TR.pointLights[key].intensity=on?1.2:0;
+    TR.bulbMeshes[key].material.color.set(on?lightColors[key]:0x1a1a1a);
+    TR.bulbMeshes[key].scale.setScalar(on?2.2:1.0);
+    TR.bulbGlows[key].material.opacity=on?0.45:0;
+    TR.bulbGlows[key].material.color.set(on?lightColors[key]:0x000000);
   });
+  roomDirty=true;
 }
+
 
 // ═══════════════════════════════════════════════════════
 // INIT

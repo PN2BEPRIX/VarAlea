@@ -110,6 +110,30 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
 .color-card{border:2px solid var(--border);border-radius:14px;overflow:hidden}
 .color-card-title{padding:10px 14px;font-size:13px;font-weight:800;color:#fff}
 .color-card-body{background:#fff;padding:12px 14px;font-size:13px;line-height:1.7;font-weight:600;color:#374151}
+/* ── PIÈCE ── */
+.switches-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.sw-card{flex:1;min-width:100px;background:#fff;border:2.5px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .18s;user-select:none;-webkit-user-select:none}
+.sw-card.on-r{background:#fff1f1;border-color:#f87171}
+.sw-card.on-g{background:#f0fdf4;border-color:#4ade80}
+.sw-card.on-b{background:#eff6ff;border-color:#60a5fa}
+.sw-card.on-w{background:#fafafa;border-color:#d1d5db}
+.sw-card.on-y{background:#fffbeb;border-color:#fbbf24}
+.sw-card.on-m{background:#fdf4ff;border-color:#d946ef}
+.sw-icon{font-size:28px;margin-bottom:6px;display:block;transition:filter .2s}
+.sw-card:not(.on-r):not(.on-g):not(.on-b):not(.on-w):not(.on-y):not(.on-m) .sw-icon{filter:grayscale(1) opacity(0.35)}
+.sw-label{font-size:12px;font-weight:800;color:var(--muted);display:block}
+.sw-card.on-r .sw-label{color:#dc2626}
+.sw-card.on-g .sw-label{color:#16a34a}
+.sw-card.on-b .sw-label{color:#1d4ed8}
+.sw-card.on-w .sw-label{color:#374151}
+.sw-card.on-y .sw-label{color:#92400e}
+.sw-card.on-m .sw-label{color:#7e22ce}
+.sw-badge{display:inline-block;font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:2px 7px;border-radius:99px;margin-top:4px}
+.obj-legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:12px}
+.obj-card{background:#fff;border:2px solid var(--border);border-radius:10px;padding:8px 10px;text-align:center;font-size:12px;font-weight:700}
+.obj-dot{width:20px;height:20px;border-radius:50%;margin:0 auto 5px;border:1.5px solid rgba(0,0,0,0.12)}
+.piece-info{background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:600;color:#78350f;margin-bottom:12px;line-height:1.7}
+.piece-info strong{color:#92400e}
 </style>
 </head>
 <body>
@@ -129,6 +153,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
     <button class="ntab" onclick="go('diff',this)">〰️ Diffraction</button>
     <button class="ntab" onclick="go('exo',this)">✏️ Exercices</button>
     <button class="ntab" onclick="go('couleurs',this)">🎨 Couleurs</button>
+    <button class="ntab" onclick="go('piece',this)">🏠 La Pièce</button>
     <button class="ntab" onclick="go('bilan',this)">📋 Bilan</button>
   </div>
 </div>
@@ -316,6 +341,68 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;heigh
   </div>
 </div>
 
+<!-- ════ PIÈCE ════ -->
+<div class="panel" id="p-piece">
+  <div class="piece-info">
+    💡 <strong>Principe :</strong> un objet coloré ne réfléchit que la lumière de sa propre couleur. Sous une lumière rouge, un objet vert paraît <strong>noir</strong> car il n'y a pas de lumière verte à réfléchir. Active/désactive les ampoules pour observer !
+  </div>
+
+  <!-- Interrupteurs -->
+  <div class="switches-row" id="sw-row">
+    <div class="sw-card on-r" id="sw-r" onclick="toggleLight('r')">
+      <span class="sw-icon">🔴</span>
+      <span class="sw-label">Rouge</span>
+      <span class="sw-badge" id="swb-r" style="background:#fee2e2;color:#dc2626">ON</span>
+    </div>
+    <div class="sw-card on-g" id="sw-g" onclick="toggleLight('g')">
+      <span class="sw-icon">🟢</span>
+      <span class="sw-label">Vert</span>
+      <span class="sw-badge" id="swb-g" style="background:#dcfce7;color:#16a34a">ON</span>
+    </div>
+    <div class="sw-card on-b" id="sw-b" onclick="toggleLight('b')">
+      <span class="sw-icon">🔵</span>
+      <span class="sw-label">Bleu</span>
+      <span class="sw-badge" id="swb-b" style="background:#dbeafe;color:#1d4ed8">ON</span>
+    </div>
+    <div class="sw-card" id="sw-w" onclick="toggleLight('w')">
+      <span class="sw-icon">⚪</span>
+      <span class="sw-label">Blanc</span>
+      <span class="sw-badge" id="swb-w" style="background:#f1f5f9;color:#64748b">OFF</span>
+    </div>
+    <div class="sw-card" id="sw-y" onclick="toggleLight('y')">
+      <span class="sw-icon">🟡</span>
+      <span class="sw-label">Jaune</span>
+      <span class="sw-badge" id="swb-y" style="background:#fef3c7;color:#92400e">OFF</span>
+    </div>
+    <div class="sw-card" id="sw-m" onclick="toggleLight('m')">
+      <span class="sw-icon">🟣</span>
+      <span class="sw-label">Magenta</span>
+      <span class="sw-badge" id="swb-m" style="background:#fdf4ff;color:#7e22ce">OFF</span>
+    </div>
+  </div>
+
+  <div class="cvcard" id="wrap-piece" style="background:#1a1a2e">
+    <div id="loading-piece" style="height:440px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#64748b">
+      <div style="font-size:32px">⏳</div>
+      <div style="font-size:13px;font-weight:700">Chargement de la pièce 3D…</div>
+    </div>
+  </div>
+
+  <!-- Légende objets -->
+  <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 8px">Objets dans la pièce</div>
+  <div class="obj-legend">
+    <div class="obj-card"><div class="obj-dot" style="background:#ef4444"></div>Balle rouge</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#22c55e"></div>Cube vert</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#3b82f6"></div>Cylindre bleu</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#facc15"></div>Boîte jaune</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#f97316"></div>Pyramide orange</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#d946ef"></div>Sphère magenta</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#a78bfa"></div>Prisme violet</div>
+    <div class="obj-card"><div class="obj-dot" style="background:#f9fafb;border-color:#d1d5db"></div>Cube blanc</div>
+  </div>
+  <div id="piece-explain" style="margin-top:12px;background:#f0f9ff;border:2px solid #bae6fd;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:600;color:#0c4a6e;line-height:1.7;min-height:48px"></div>
+</div>
+
 <!-- ════ BILAN ════ -->
 <div class="panel" id="p-bilan">
   <div class="bsec"><div class="bsec-ttl" style="background:var(--blue)">🔦 La lumière se propage en ligne droite</div><div class="bsec-body">
@@ -359,6 +446,7 @@ function go(id, btn){
       if(sub.id==='cp-pix') drawPixels();
     }
   }
+  if(id==='piece') initPiece();
 }
 function togIt(cbId,wId,cb){ const c=document.getElementById(cbId),w=document.getElementById(wId); c.checked=!c.checked; w.classList.toggle('on',c.checked); cb&&cb(); }
 function tog3(cbId,wId){ const c=document.getElementById(cbId),w=document.getElementById(wId); c.checked=!c.checked; w.classList.toggle('on',c.checked); updateScene(); }
@@ -1292,6 +1380,242 @@ function showA(n){
     document.getElementById('pscore').textContent=nSeen+' / 6';
   }
   btn.textContent=box.classList.contains('on')?'Masquer':(card.classList.contains('done')?'Revoir':'Correction');
+}
+
+// ═══════════════════════════════════════════════════════
+// PIÈCE 3D
+// ═══════════════════════════════════════════════════════
+let TR=null, rafRoom=null;
+
+// Light states: r,g,b on; w,y,m off
+const roomLights={r:true,g:true,b:true,w:false,y:false,m:false};
+const lightColors={r:0xff0000,g:0x00ff00,b:0x0000ff,w:0xffffff,y:0xffee00,m:0xff00ff};
+const lightLabels={r:'Rouge',g:'Vert',b:'Bleu',w:'Blanc',y:'Jaune',m:'Magenta'};
+
+function toggleLight(key){
+  roomLights[key]=!roomLights[key];
+  const card=document.getElementById('sw-'+key);
+  const badge=document.getElementById('swb-'+key);
+  const on=roomLights[key];
+  const badgeStyles={r:['#fee2e2','#dc2626'],g:['#dcfce7','#16a34a'],b:['#dbeafe','#1d4ed8'],w:['#f1f5f9','#374151'],y:['#fef3c7','#92400e'],m:['#fdf4ff','#7e22ce']};
+  card.className='sw-card'+(on?' on-'+key:'');
+  badge.textContent=on?'ON':'OFF';
+  badge.style.background=on?badgeStyles[key][0]:'#f1f5f9';
+  badge.style.color=on?badgeStyles[key][1]:'#94a3b8';
+  if(TR) updateRoomLights();
+  updatePieceExplain();
+}
+
+function updatePieceExplain(){
+  const active=Object.entries(roomLights).filter(([k,v])=>v).map(([k])=>lightLabels[k]);
+  const el=document.getElementById('piece-explain');
+  if(!active.length){el.textContent='🌑 Toutes les lumières sont éteintes → tout est noir. Sans lumière, les yeux ne perçoivent aucune couleur.';return;}
+  const hasR=roomLights.r||roomLights.w||roomLights.y||roomLights.m;
+  const hasG=roomLights.g||roomLights.w||roomLights.y;
+  const hasB=roomLights.b||roomLights.w||roomLights.m;
+  const lines=[];
+  lines.push(`💡 Lumières actives : <strong>${active.join(', ')}</strong>`);
+  if(hasR&&!hasG&&!hasB) lines.push('🔴 Seule la lumière rouge est présente → les objets <strong>rouges</strong> paraissent rouges, les <strong>verts et bleus</strong> paraissent <strong>noirs</strong>.');
+  else if(!hasR&&hasG&&!hasB) lines.push('🟢 Seule la lumière verte → les objets <strong>verts</strong> paraissent verts, les <strong>rouges et bleus</strong> paraissent <strong>noirs</strong>.');
+  else if(!hasR&&!hasG&&hasB) lines.push('🔵 Seule la lumière bleue → les objets <strong>bleus</strong> paraissent bleus, les <strong>rouges et verts</strong> paraissent <strong>noirs</strong>.');
+  else if(hasR&&hasG&&!hasB) lines.push('🟡 Rouge+Vert = lumière jaune → les objets <strong>jaunes</strong> sont bien éclairés, les objets <strong>bleus</strong> restent sombres.');
+  else if(hasR&&!hasG&&hasB) lines.push('🟣 Rouge+Bleu = lumière magenta → les objets <strong>magenta/rouges/bleus</strong> sont éclairés, les <strong>verts</strong> paraissent noirs.');
+  else if(!hasR&&hasG&&hasB) lines.push('🩵 Vert+Bleu = lumière cyan → les objets <strong>cyan/verts/bleus</strong> sont éclairés, les <strong>rouges</strong> paraissent noirs.');
+  else if(hasR&&hasG&&hasB) lines.push('⚪ Lumière blanche (R+V+B) → tous les objets apparaissent avec leur <strong>vraie couleur</strong>.');
+  el.innerHTML=lines.join('<br>');
+}
+
+function initPiece(){
+  if(!window.THREE){setTimeout(initPiece,150);return;}
+  if(TR){updateRoomLights();return;}
+
+  const wrap=document.getElementById('wrap-piece');
+  document.getElementById('loading-piece')?.remove();
+  const W=wrap.offsetWidth||680, H=Math.min(500,Math.round(W*0.68));
+
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=false; // disable shadows for cleaner colour rendering
+  renderer.setClearColor(0x0a0a0a); wrap.appendChild(renderer.domElement);
+
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(58,W/H,0.1,80);
+
+  // Base ambient — very slight so pitch black stays black
+  const ambient=new THREE.AmbientLight(0xffffff,0.04);
+  scene.add(ambient);
+
+  // ── ROOM GEOMETRY ──
+  const roomW=13,roomH=6.5,roomD=13;
+  const wallMat=new THREE.MeshLambertMaterial({color:0xe8dfd0,side:THREE.BackSide});
+  const room=new THREE.Mesh(new THREE.BoxGeometry(roomW,roomH,roomD),wallMat);
+  scene.add(room);
+
+  // Floor
+  const floorMat=new THREE.MeshLambertMaterial({color:0xc8a86b});
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(roomW-0.1,roomD-0.1),floorMat);
+  floor.rotation.x=-Math.PI/2; floor.position.y=-roomH/2+0.01; scene.add(floor);
+  const gridR=new THREE.GridHelper(13,13,0x9b7a3a,0x9b7a3a);
+  gridR.position.y=-roomH/2+0.02; gridR.material.opacity=0.25; gridR.material.transparent=true; scene.add(gridR);
+
+  // ── 6 POINT LIGHTS — each illuminates the whole room when on ──
+  // Placed near ceiling, spread so coverage overlaps fully
+  const bulbPositions={
+    r:[-3.5, roomH/2-0.4, -3],
+    g:[ 3.5, roomH/2-0.4, -3],
+    b:[ 0,   roomH/2-0.4,  0],
+    w:[ 0,   roomH/2-0.4, -1],
+    y:[-3.5, roomH/2-0.4,  3],
+    m:[ 3.5, roomH/2-0.4,  3],
+  };
+  const pointLights={}, bulbMeshes={}, bulbGlows={};
+  Object.entries(bulbPositions).forEach(([key,[x,y,z]])=>{
+    const col=lightColors[key];
+
+    // Main PointLight — decay=0 means NO falloff, uniform room illumination
+    const pt=new THREE.PointLight(col, 0, 0, 0); // intensity=0, distance=0=infinite, decay=0
+    pt.position.set(x,y,z);
+    scene.add(pt);
+    pointLights[key]=pt;
+
+    // Bulb sphere (glows when on)
+    const bulbM=new THREE.Mesh(
+      new THREE.SphereGeometry(0.16,12,12),
+      new THREE.MeshBasicMaterial({color:0x222222})
+    );
+    bulbM.position.set(x,y,z); scene.add(bulbM); bulbMeshes[key]=bulbM;
+
+    // Glow halo (slightly larger, transparent)
+    const halo=new THREE.Mesh(
+      new THREE.SphereGeometry(0.38,10,10),
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0})
+    );
+    halo.position.set(x,y,z); scene.add(halo); bulbGlows[key]=halo;
+
+    // Cord
+    const cord=new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015,0.015,0.6,6),
+      new THREE.MeshLambertMaterial({color:0x555555})
+    );
+    cord.position.set(x,y+0.35,z); scene.add(cord);
+
+    // Lampshade
+    const shade=new THREE.Mesh(
+      new THREE.ConeGeometry(0.42,0.3,12,1,true),
+      new THREE.MeshLambertMaterial({color:0x999999,side:THREE.DoubleSide})
+    );
+    shade.rotation.x=Math.PI; shade.position.set(x,y-0.12,z); scene.add(shade);
+  });
+
+  // ── OBJECTS ──
+  // Each object has a TRUE color (MeshLambertMaterial) — it only reflects its color
+  const objs=[
+    {geo:new THREE.SphereGeometry(0.55,24,24), col:0xff2222, x:-4, z:-1, label:'Balle rouge'},
+    {geo:new THREE.BoxGeometry(0.9,0.9,0.9),   col:0x22cc44, x:-2, z: 1, label:'Cube vert'},
+    {geo:new THREE.CylinderGeometry(0.3,0.3,1.1,20), col:0x2244ff, x: 0, z:-1, label:'Cylindre bleu'},
+    {geo:new THREE.BoxGeometry(1.0,0.65,0.65), col:0xffcc00, x: 2, z: 1, label:'Boîte jaune'},
+    {geo:new THREE.ConeGeometry(0.45,1.1,4),   col:0xff6600, x: 4, z: 0, label:'Pyramide orange'},
+    {geo:new THREE.SphereGeometry(0.5,20,20),  col:0xee00ee, x:-3, z: 3, label:'Sphère magenta'},
+    {geo:new THREE.BoxGeometry(0.7,1.2,0.7),   col:0x8833ff, x: 3, z: 3, label:'Prisme violet'},
+    {geo:new THREE.BoxGeometry(0.85,0.85,0.85),col:0xffffff, x: 0, z: 3, label:'Cube blanc'},
+  ];
+
+  objs.forEach(({geo,col,x,z})=>{
+    const mat=new THREE.MeshLambertMaterial({color:col});
+    const mesh=new THREE.Mesh(geo,mat);
+    const box3=new THREE.Box3().setFromObject(mesh);
+    const h=(box3.max.y-box3.min.y)/2;
+    mesh.position.set(x,-roomH/2+h+0.01,z);
+    scene.add(mesh);
+  });
+
+  TR={renderer,scene,camera,pointLights,bulbMeshes,bulbGlows,W,H};
+
+  // ── ORBIT ──
+  let theta=-0.3,phi=0.9,radius=13;
+  const tgt=new THREE.Vector3(0,0,0);
+  const DEF={theta:-0.3,phi:0.9,radius:13};
+  function camUpdate(){
+    camera.position.set(tgt.x+radius*Math.sin(phi)*Math.cos(theta),tgt.y+radius*Math.cos(phi),tgt.z+radius*Math.sin(phi)*Math.sin(theta));
+    camera.lookAt(tgt);
+  }
+  camUpdate(); TR.camUpdate=camUpdate;
+
+  // Overlays
+  const hint=document.createElement('div'); hint.className='overlay-hint';
+  hint.textContent='1 doigt: rotation · 2 doigts: zoom/pan · double-tap: reset'; wrap.appendChild(hint);
+  const resetBtn=document.createElement('button'); resetBtn.className='overlay-reset';
+  resetBtn.textContent='⟳ Vue initiale'; wrap.appendChild(resetBtn);
+  resetBtn.addEventListener('click',()=>{theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0,0,0);camUpdate();});
+
+  const el=renderer.domElement;
+  let mD2={on:false,mode:'orbit',x:0,y:0};
+  el.addEventListener('mousedown',e=>{mD2={on:true,mode:e.button===2?'pan':'orbit',x:e.clientX,y:e.clientY};e.preventDefault();});
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  window.addEventListener('mousemove',e=>{
+    if(!mD2.on)return;
+    const dx=e.clientX-mD2.x,dy=e.clientY-mD2.y;
+    if(mD2.mode==='orbit'){theta-=dx*0.012;phi=Math.max(0.1,Math.min(1.55,phi-dy*0.011));}
+    else{const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.001;tgt.addScaledVector(r,-dx*sc);tgt.addScaledVector(u,dy*sc);}
+    mD2.x=e.clientX;mD2.y=e.clientY;camUpdate();
+  });
+  window.addEventListener('mouseup',()=>mD2.on=false);
+  el.addEventListener('wheel',e=>{radius=Math.max(3,Math.min(22,radius+e.deltaY*0.018));camUpdate();e.preventDefault();},{passive:false});
+
+  // Touch — el only (no window)
+  let tP={},lPi=null,lPa=null,lTp=0;
+  el.addEventListener('touchstart',e=>{e.preventDefault();tP={};for(const t of e.touches)tP[t.identifier]={x:t.clientX,y:t.clientY};lPi=null;lPa=null;},{passive:false});
+  el.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const arr=Array.from(e.touches);
+    if(arr.length===1){
+      const t=arr[0],prev=tP[t.identifier]||{x:t.clientX,y:t.clientY};
+      theta-=(t.clientX-prev.x)*0.014;phi=Math.max(0.1,Math.min(1.55,phi-(t.clientY-prev.y)*0.013));
+      tP[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();
+    }else if(arr.length===2){
+      const[a2,b2]=arr;
+      const mx=(a2.clientX+b2.clientX)/2,my=(a2.clientY+b2.clientY)/2;
+      const dist=Math.hypot(a2.clientX-b2.clientX,a2.clientY-b2.clientY);
+      if(lPi!==null)radius=Math.max(3,Math.min(22,radius+(lPi-dist)*0.03));
+      lPi=dist;
+      if(lPa){const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.001;tgt.addScaledVector(r,-(mx-lPa.x)*sc);tgt.addScaledVector(u,(my-lPa.y)*sc);}
+      lPa={x:mx,y:my};for(const t of arr)tP[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();
+    }
+  },{passive:false});
+  el.addEventListener('touchend',e=>{
+    tP={};lPi=null;lPa=null;
+    const now=Date.now();if(now-lTp<300){theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0,0,0);camUpdate();}
+    lTp=now;
+  });
+  window.addEventListener('resize',()=>{
+    if(!TR)return;
+    const nW=wrap.offsetWidth||680,nH=Math.min(500,Math.round(nW*0.68));
+    TR.renderer.setSize(nW,nH);TR.camera.aspect=nW/nH;TR.camera.updateProjectionMatrix();TR.camUpdate&&TR.camUpdate();
+  });
+
+  // RAF
+  function tickRoom(){rafRoom=requestAnimationFrame(tickRoom);TR.renderer.render(TR.scene,TR.camera);}
+  tickRoom();
+
+  updateRoomLights();
+  updatePieceExplain();
+}
+
+function updateRoomLights(){
+  if(!TR) return;
+  // Count active lights to scale intensity
+  const nOn=Object.values(roomLights).filter(Boolean).length;
+  // Each light gets full intensity — more lights = brighter room (additive)
+  // With decay=0, intensity maps linearly to scene brightness
+  const INTENSITY = 1.2; // per light, tune here
+  Object.entries(roomLights).forEach(([key,on])=>{
+    TR.pointLights[key].intensity = on ? INTENSITY : 0;
+    const litCol=lightColors[key];
+    TR.bulbMeshes[key].material.color.set(on ? litCol : 0x1a1a1a);
+    TR.bulbMeshes[key].scale.setScalar(on ? 2.2 : 1.0);
+    TR.bulbGlows[key].material.opacity = on ? 0.45 : 0;
+    TR.bulbGlows[key].material.color.set(on ? litCol : 0x000000);
+  });
 }
 
 // ═══════════════════════════════════════════════════════

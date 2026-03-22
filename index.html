@@ -528,8 +528,12 @@ function init3D(){
   el.addEventListener('wheel',e=>{ radius=Math.max(2,Math.min(28,radius+e.deltaY*0.018)); camUpdate(); e.preventDefault(); },{passive:false});
 
   let touches={},lastPinch=null,lastPan=null,lastTap=0;
-  el.addEventListener('touchstart',e=>{ e.preventDefault(); touches={}; for(const t of e.touches)touches[t.identifier]={x:t.clientX,y:t.clientY}; lastPinch=null;lastPan=null; },{passive:false});
-  window.addEventListener('touchmove',e=>{
+  el.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    touches={}; for(const t of e.touches)touches[t.identifier]={x:t.clientX,y:t.clientY};
+    lastPinch=null; lastPan=null;
+  },{passive:false});
+  el.addEventListener('touchmove',e=>{
     e.preventDefault();
     const arr=Array.from(e.touches);
     if(arr.length===1){
@@ -550,7 +554,12 @@ function init3D(){
       lastPan={x:mx,y:my}; for(const t of arr)touches[t.identifier]={x:t.clientX,y:t.clientY}; camUpdate();
     }
   },{passive:false});
-  window.addEventListener('touchend',e=>{ touches={};lastPinch=null;lastPan=null; const now=Date.now(); if(now-lastTap<300){ theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0.5,0.5,0);camUpdate(); } lastTap=now; });
+  el.addEventListener('touchend',e=>{
+    touches={}; lastPinch=null; lastPan=null;
+    const now=Date.now();
+    if(now-lastTap<300){ theta=DEF.theta;phi=DEF.phi;radius=DEF.radius;tgt.set(0.5,0.5,0);camUpdate(); }
+    lastTap=now;
+  });
   window.addEventListener('resize',()=>{ const nW=wrap.offsetWidth||680,nH=Math.min(480,Math.round(nW*0.62)); renderer.setSize(nW,nH);camera.aspect=nW/nH;camera.updateProjectionMatrix(); camUpdate(); });
 
   // ── ANIMATION LOOP ──
@@ -1027,13 +1036,34 @@ function initAdditive(){
   window.addEventListener('mouseup',()=>mD.on=false);
   el.addEventListener('wheel',e=>{radius=Math.max(4,Math.min(22,radius+e.deltaY*0.018));camUpdate();e.preventDefault();},{passive:false});
   let tArr2={},lP2=null,lPan2=null,lTap2=0;
-  el.addEventListener('touchstart',e=>{e.preventDefault();tArr2={};for(const t of e.touches)tArr2[t.identifier]={x:t.clientX,y:t.clientY};lP2=null;lPan2=null;},{passive:false});
-  window.addEventListener('touchmove',e=>{
-    e.preventDefault();const arr=Array.from(e.touches);
-    if(arr.length===1){const t=arr[0],prev=tArr2[t.identifier]||{x:t.clientX,y:t.clientY};theta-=(t.clientX-prev.x)*0.014;phi=Math.max(0.1,Math.min(1.5,phi-(t.clientY-prev.y)*0.013));tArr2[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();}
-    else if(arr.length===2){const[a2,b2]=arr;const mx=(a2.clientX+b2.clientX)/2,my=(a2.clientY+b2.clientY)/2;const dist=Math.hypot(a2.clientX-b2.clientX,a2.clientY-b2.clientY);if(lP2!==null)radius=Math.max(4,Math.min(22,radius+(lP2-dist)*0.03));lP2=dist;if(lPan2){const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.0013;tgt.addScaledVector(r,-(mx-lPan2.x)*sc);tgt.addScaledVector(u,(my-lPan2.y)*sc);}lPan2={x:mx,y:my};for(const t of arr)tArr2[t.identifier]={x:t.clientX,y:t.clientY};camUpdate();}
+  el.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    tArr2={}; for(const t of e.touches)tArr2[t.identifier]={x:t.clientX,y:t.clientY};
+    lP2=null; lPan2=null;
   },{passive:false});
-  window.addEventListener('touchend',e=>{tArr2={};lP2=null;lPan2=null;const now=Date.now();if(now-lTap2<300){theta=0;phi=0.88;radius=13;tgt.set(0,0.5,0);camUpdate();}lTap2=now;});
+  el.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const arr=Array.from(e.touches);
+    if(arr.length===1){
+      const t=arr[0],prev=tArr2[t.identifier]||{x:t.clientX,y:t.clientY};
+      theta-=(t.clientX-prev.x)*0.014; phi=Math.max(0.1,Math.min(1.5,phi-(t.clientY-prev.y)*0.013));
+      tArr2[t.identifier]={x:t.clientX,y:t.clientY}; camUpdate();
+    } else if(arr.length===2){
+      const[a2,b2]=arr;
+      const mx=(a2.clientX+b2.clientX)/2,my=(a2.clientY+b2.clientY)/2;
+      const dist=Math.hypot(a2.clientX-b2.clientX,a2.clientY-b2.clientY);
+      if(lP2!==null) radius=Math.max(4,Math.min(22,radius+(lP2-dist)*0.03));
+      lP2=dist;
+      if(lPan2){const r=new THREE.Vector3(),u=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();u.copy(camera.up);const sc=radius*0.0013;tgt.addScaledVector(r,-(mx-lPan2.x)*sc);tgt.addScaledVector(u,(my-lPan2.y)*sc);}
+      lPan2={x:mx,y:my}; for(const t of arr)tArr2[t.identifier]={x:t.clientX,y:t.clientY}; camUpdate();
+    }
+  },{passive:false});
+  el.addEventListener('touchend',e=>{
+    tArr2={}; lP2=null; lPan2=null;
+    const now=Date.now();
+    if(now-lTap2<300){ theta=0;phi=0.88;radius=13;tgt.set(0,0.5,0);camUpdate(); }
+    lTap2=now;
+  });
 
   // RAF loop
   function tickAdd(){
